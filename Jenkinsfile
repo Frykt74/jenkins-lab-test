@@ -2,33 +2,41 @@ pipeline {
     agent any
     
     environment {
-        PATH = "/var/jenkins_home/go/bin:`${env.PATH}"
+        PATH = "/var/jenkins_home/go/bin:${env.PATH}"
         IMAGE_TAG = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
     }
     
     stages {
+        // Стадия 1: Unit-тесты
         stage('Unit Tests') {
             steps {
-                sh 'go test -v -run="TestHandler|TestHandler2"'
+                echo 'Running unit tests...'
+                sh 'go test -v -run="^(TestHandler|TestHandler2)$"'
             }
         }
         
+        // Стадия 2: Интеграционный тест
         stage('Integration Test') {
             steps {
-                sh 'go test -v -run="TestIntegration"'
+                echo 'Running integration test...'
+                sh 'go test -v -run="^TestIntegration$"'
             }
         }
         
+        // Стадия 3: Сборка образа
         stage('Build') {
             steps {
-                sh 'docker build -t test:`${IMAGE_TAG} .'
+                echo 'Building Docker image...'
+                sh 'docker build -t test:${IMAGE_TAG} .'
             }
         }
         
+        // Стадия 4: Деплой
         stage('Deploy') {
             steps {
+                echo 'Deploying container...'
                 sh 'docker rm -f test || true'
-                sh 'docker run -p 9000:8080 -d --name test test:`${IMAGE_TAG}'
+                sh 'docker run -p 9000:8080 -d --name test test:${IMAGE_TAG}'
             }
         }
     }
