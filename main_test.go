@@ -6,74 +6,67 @@ import (
     "testing"
 )
 
-// Unit-тест для первого сервиса
+//  Handler unit test
 func TestHandler(t *testing.T) {
-    req, err := http.NewRequest("GET", "/", nil)
-    if err != nil {
-        t.Fatal(err)
-    }
-    
+    req := httptest.NewRequest("GET", "/", nil)
     rec := httptest.NewRecorder()
-    http.HandlerFunc(Handler).ServeHTTP(rec, req)
+    
+    Handler(rec, req)
     
     if rec.Code != http.StatusOK {
-        t.Errorf("wrong status code: want %v got %v", http.StatusOK, rec.Code)
+        t.Errorf("wrong status: got %v want %v", rec.Code, http.StatusOK)
     }
-    
     if rec.Body.String() != "Hello!\n" {
         t.Errorf("wrong body: got %s", rec.Body.String())
     }
 }
 
-// Unit-тест для второго сервиса
+// Handler2 unit test
 func TestHandler2(t *testing.T) {
-    req, err := http.NewRequest("GET", "/", nil)
-    if err != nil {
-        t.Fatal(err)
-    }
-    
+    req := httptest.NewRequest("GET", "/", nil)
     rec := httptest.NewRecorder()
-    http.HandlerFunc(Handler2).ServeHTTP(rec, req)
+    
+    Handler2(rec, req)
     
     if rec.Code != http.StatusOK {
-        t.Errorf("wrong status code: want %v got %v", http.StatusOK, rec.Code)
+        t.Errorf("wrong status: got %v want %v", rec.Code, http.StatusOK)
     }
-    
     if rec.Body.String() != "Hello from Service 2!\n" {
         t.Errorf("wrong body: got %s", rec.Body.String())
     }
 }
 
-// Интеграционный тест - проверяет работу обоих сервисов вместе
+// integration test
 func TestIntegration(t *testing.T) {
-    // Запускаем тестовые серверы для обоих сервисов
+    // Запускаем первый сервис на тестовом сервере
     server1 := httptest.NewServer(http.HandlerFunc(Handler))
     defer server1.Close()
     
+    // Запускаем второй сервис на тестовом сервере
     server2 := httptest.NewServer(http.HandlerFunc(Handler2))
     defer server2.Close()
     
-    // Проверяем второй сервис
-    resp, err := http.Get(server2.URL)
+    // Проверяем, что первый сервис отвечает
+    resp1, err := http.Get(server1.URL)
     if err != nil {
         t.Fatal(err)
     }
-    defer resp.Body.Close()
+    defer resp1.Body.Close()
     
-    if resp.StatusCode != http.StatusOK {
-        t.Errorf("Service 2 returned wrong status: got %v want %v", resp.StatusCode, http.StatusOK)
+    if resp1.StatusCode != http.StatusOK {
+        t.Errorf("Service 1 failed: got %v", resp1.StatusCode)
     }
     
-    // Проверяем первый сервис
-    resp, err = http.Get(server1.URL)
+    // Проверяем, что второй сервис отвечает
+    resp2, err := http.Get(server2.URL)
     if err != nil {
         t.Fatal(err)
     }
-    defer resp.Body.Close()
+    defer resp2.Body.Close()
     
-    if resp.StatusCode != http.StatusOK {
-        t.Errorf("Service 1 returned wrong status: got %v want %v", resp.StatusCode, http.StatusOK)
+    if resp2.StatusCode != http.StatusOK {
+        t.Errorf("Service 2 failed: got %v", resp2.StatusCode)
     }
     
-    t.Log("Integration test passed: both services are responding correctly")
+    t.Log("[SUCCESS!] Integration test passed: both services responding")
 }
